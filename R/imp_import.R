@@ -71,7 +71,13 @@ createInfoTable <- function(fileNames, scanIdCol = const_scanIdCol, confIdCol = 
   return(infoTable)
 } #Eof
 
-askSep <- function(cns) {
+askSep <- function(infoTableRed) {
+  cns <- colnames(infoTableRed)[-ncol(infoTableRed)]
+  naInd <- which(is.na(infoTableRed[-ncol(infoTableRed)]), arr.ind = TRUE)
+  if (nrow(naInd) != 0){
+    naInd <- unique(naInd[,2])
+    cns <-  cns[-naInd]
+  }
   nrOk <- FALSE
   tmp <- data.frame(classVariables = cns)
   while (!nrOk) {
@@ -239,7 +245,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
   infoTable <- createInfoTable(fileNames, NrAdjust)
   infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))]
   infoTableRed <- reCharacter(infoTableRed)
-  sepID <- askSep(colnames(infoTableRed)[-ncol(infoTableRed)])
+  sepID <- askSep(infoTableRed)
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
   outList <- makeListLayout(infoTable, Ind_s, Ind_c)
