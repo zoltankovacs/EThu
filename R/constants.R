@@ -9,3 +9,4 @@ const_scanIdCol <- "scannerID"
 const_confIdCol <- "configID"
 const_nrSpectDf <- 3
 const_nameSpectList <- c("absorbance", "reference", "sample")
+const_clNameConsec <- "conSNr"

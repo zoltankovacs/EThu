@@ -1,4 +1,4 @@
-findMaxNrElements <- function(fileNames, NrAdjust, sep = const_sep){
+findMaxNrElements <- function(fileNames, NrAdjust, sep = const_sep) {
   maxNr <- max(unlist(lapply(strsplit(fileNames, sep), length)))
   maxNrInd <- which.max(unlist(lapply(strsplit(fileNames, sep), length)))
   maxNr <- maxNr -1 
@@ -6,7 +6,7 @@ findMaxNrElements <- function(fileNames, NrAdjust, sep = const_sep){
   return(list(maxNr=maxNr, maxNrInd=maxNrInd))
 } #Eof
 
-createSingleLineList <- function(singlePath){
+createSingleLineList <- function(singlePath) {
   pathSplit <- unlist(strsplit(singlePath, "/"))[-1]
   last <- pathSplit[length(pathSplit)]
   
@@ -24,7 +24,9 @@ createSingleLineList <- function(singlePath){
   sepSplit <- strsplit(pathSplit, "@")
   
   ID <- unlist(lapply(sepSplit, function(x) x[1]))
+  ID <- c(ID, const_clNameConsec)
   value <- unlist(lapply(sepSplit, function(x) x[2]))
+  value <- c(value, NA)
   return(list(ID=ID, value=value))
 } #Eof
 
@@ -46,14 +48,14 @@ reCharacter <- function(df) {
   return(df)
 }#eof
 
-createInfoTable <- function(fileNames, scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1){
+createInfoTable <- function(fileNames, scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1) {
   maxNrList <- findMaxNrElements(fileNames, NrAdjust)
-  infoTable <- as.data.frame(matrix(NA, length(fileNames), maxNrList$maxNr+1))# to add 1 for the consecutives
+  infoTable <- as.data.frame(matrix(NA, length(fileNames), maxNrList$maxNr + 1))# to add 1 for the consecutives
   colNameInfTable <- createSingleLineList(fileNames[maxNrList$maxNrInd])$ID
   colnames(infoTable) <- colNameInfTable
-  infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))]
+  # infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))] # 
   
-  for (f in 1:length(fileNames)){
+  for (f in 1:length(fileNames)) {
     a <- createSingleLineList(fileNames[f])
     Ind <- match(colNameInfTable, a$ID)
     infoTable[f, ] <- a$value[Ind]
@@ -62,29 +64,29 @@ createInfoTable <- function(fileNames, scanIdCol = const_scanIdCol, confIdCol = 
   return(infoTable)
 } #Eof
 
-askSep <- function(cns){
+askSep <- function(cns) {
   nrOk <- FALSE
   tmp <- data.frame(classVariables = cns)
-  while (!nrOk){
+  while (!nrOk) {
     cat("Please provide the index of the class variable to be used for phyical separation of the data, provide 0 for no separation\n\n")
     print(tmp)
     cat("\n\n")
     a <- readLines(n = 1)
     a <- as.numeric(a)
-    if (all(is.numeric(a)) & length(a) == 1 & a <= length(cns)){
+    if (all(is.numeric(a)) & length(a) == 1 & a <= length(cns)) {
       nrOk = TRUE
     }
   } # E while
   return(a)
 } #Eof
 
-getHeader_old <- function(rawCsvFile, tz = "EST", yearCorrect = 2016){
+getHeader_old <- function(rawCsvFile, tz = "EST", yearCorrect = 2016) {
   ColumnNames <- c("ScannerID", "type", "PixelWidth","SystemTemp", "DetectorTemp", "Humidity", "NrMeasPoint", "NrRep", "Gain", "MeasTime", "absTime")
   # infoTable <- data.frame(matrix(NA, nrow = 1, ncol = length(ColumnNames)))
   # colnames(infoTable) <- ColumnNames
   ScannerID <- data.frame(as.character(rawCsvFile[11,2]), stringsAsFactors = F)
   type <- data.frame(as.numeric(as.character(rawCsvFile[13, 2])), stringsAsFactors = FALSE)
-  if (type == "1"){type <- "Hadamard"} else {type <- "Column"}
+  if (type == "1") {type <- "Hadamard"} else {type <- "Column"}
   type <- data.frame(type, stringsAsFactors = FALSE)
   PixelWidth <- data.frame(as.numeric(as.character(rawCsvFile[16, 2])))
   SystemTemp <-data.frame(as.numeric(as.character(rawCsvFile[3,2]))/100)
@@ -95,7 +97,7 @@ getHeader_old <- function(rawCsvFile, tz = "EST", yearCorrect = 2016){
   Gain <- data.frame(as.numeric(as.character(rawCsvFile[19,2])))
   MeasTime <- data.frame(as.numeric(as.character(rawCsvFile[20,2])))
   absTime <- as.POSIXct(strptime(as.character(rawCsvFile[1,2]), "%d/%m/%Y @ %H:%M:%S"), tz)
-  if(!difftime(absTime, "1996-06-15 10:59:51 EST", tz = tz) > 3650){
+  if(!difftime(absTime, "1996-06-15 10:59:51 EST", tz = tz) > 3650) {
     absTime <- absTime-difftime(cut.POSIXt(absTime, "year"), paste0(yearCorrect, "-01-01"))
   }
   absTime <- as.character(absTime)
@@ -105,13 +107,13 @@ getHeader_old <- function(rawCsvFile, tz = "EST", yearCorrect = 2016){
   invisible(infoTable)
 }
 
-getHeader <- function(singleFilename, tz = "EST", yearCorrect = 2016){
+getHeader <- function(singleFilename, tz = "EST", yearCorrect = 2016) {
   con <- file(singleFilename, open="r")
   char <- readLines(con, n=19)
   close(con)
   char <- unlist(lapply(strsplit(char, ","), function(x) x[2]))
   ScannerID <- char[10]
-  type <- if (char[12] == "1"){type <- "Hadamard"} else {type <- "Column"}
+  type <- if (char[12] == "1") {type <- "Hadamard"} else {type <- "Column"}
   PixelWidth <- as.numeric(char[15])
   SystemTemp <- as.numeric(char[4])/100
   DetectorTemp <- as.numeric(char[5])/100
@@ -121,7 +123,7 @@ getHeader <- function(singleFilename, tz = "EST", yearCorrect = 2016){
   Gain <- as.numeric(char[18])
   MeasTime <- as.numeric(char[19])
   absTime <- as.POSIXct(strptime(as.character(char[2]), "%d/%m/%Y @ %H:%M:%S"), tz)
-  if(!difftime(absTime, "1996-06-15 10:59:51 EST", tz = tz) > 3650){
+  if(!difftime(absTime, "1996-06-15 10:59:51 EST", tz = tz) > 3650) {
     absTime <- absTime-difftime(cut.POSIXt(absTime, "year"), paste0(yearCorrect, "-01-01"))
   }
   absTime <- as.character(absTime)
@@ -130,7 +132,7 @@ getHeader <- function(singleFilename, tz = "EST", yearCorrect = 2016){
   return(out)
 } #eof
 
-getAbsRefSmplSpect_old <- function(rawCsvFile, wlsRnd = 4){
+getAbsRefSmplSpect_old <- function(rawCsvFile, wlsRnd = 4) {
   wavelength <- as.numeric(as.character(rawCsvFile[-(1:21),1]))
   absorbance <- t(data.frame(as.numeric(as.character(rawCsvFile[-(1:21),2]))))
   ref <- t(data.frame(as.numeric(as.character(rawCsvFile[-(1:21),3]))))
@@ -141,7 +143,7 @@ getAbsRefSmplSpect_old <- function(rawCsvFile, wlsRnd = 4){
   invisible(AbsRefSmplSpect)
 } #eof
 
-getAbsRefSmplSpect <- function(singleFilename){
+getAbsRefSmplSpect <- function(singleFilename) {
   a <- read.csv(singleFilename, skip=19)
   nir <- t(a[,2:4])
   wls <- paste("X", a[,1], sep="")
@@ -150,7 +152,7 @@ getAbsRefSmplSpect <- function(singleFilename){
   return(nir)
 } #eof
 
-getNrOfCol <- function(singlePath, nrColAdd){
+getNrOfCol <- function(singlePath, nrColAdd) {
   headerTable <- getHeader(singlePath)
   AbsRefSmplSpect <- getAbsRefSmplSpect(singlePath)
   Nr <- ncol(headerTable) + ncol(AbsRefSmplSpect) + nrColAdd
@@ -166,7 +168,7 @@ makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
   spectList <- vector("list", nrSpectDf)
   names(spectList) <- const_nameSpectList
   # first get the dimensions of the list
-  for (i in 1:leScanner){
+  for (i in 1:leScanner) {
     ind <- which(infoTable[,ColInd_s] == uniq_s[i])
     tmp <- infoTable[ind,]
     a <- levels(tmp[, colInd_c])
@@ -182,7 +184,7 @@ makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
     ao <- c(ao, a)
   }
   # create the list
-  for (i in 1:leScanner){
+  for (i in 1:leScanner) {
     outList[[i]] <- lapply(vector("list", leConf[i]), function(x) c(x, spectList))
     # Names <- levConf[(sum(leConf[1:i])-leConf[i]+1):sum(leConf[1:i])]
     names(outList[[i]]) <- as.character(levConf[which(ao == i)])
@@ -191,7 +193,7 @@ makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
   #return(list(leScanner=leScanner, uniqS=as.character(uniq_s), levConf = levConf, leConf=leConf))
 } #eof
 
-mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1){
+mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1) {
   fileNames <- list.files(const_rawdataFolder, full.names = TRUE, recursive = T, pattern = const_fileExtension)
   infoTable <- createInfoTable(fileNames, NrAdjust)
   infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))]
@@ -200,7 +202,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
   outList <- makeListLayout(infoTable, Ind_s, Ind_c)
-  if (sepID == 0){
+  if (sepID == 0) {
     uniq_s <- unique(infoTable[, Ind_s])
     for (sid in 1: length(uniq_s)) {
       Ind <- which(infoTable[, Ind_s] == uniq_s[sid])
@@ -214,7 +216,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
         colDfAbs <- colDfRef <- colDfSmpl <- as.data.frame(matrix(NA, length(Ind2), nrOfCol))
         colnames(colDfAbs) <- colnames(colDfRef) <- colnames(colDfSmpl) <- colNames
         fileNamesSelect <- fileNames[Ind[Ind2]]
-        for (i in 1:length(fileNamesSelect)){
+        for (i in 1:length(fileNamesSelect)) {
           Header   <- getHeader(fileNamesSelect[i])
           spectra <- getAbsRefSmplSpect(fileNamesSelect[i])
           addHeader <- infoTableRed[Ind[Ind2][i], ]
