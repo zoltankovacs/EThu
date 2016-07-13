@@ -215,3 +215,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
   return(list(colDfAbs=colDfAbs, colDfRef=colDfRef, colDfSmpl=colDfSmpl))
 } #Eof
 
+test <- function() {
+  
+  print("deeee")
+}
