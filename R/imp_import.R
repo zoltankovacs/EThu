@@ -200,7 +200,7 @@ makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
   #return(list(leScanner=leScanner, uniqS=as.character(uniq_s), levConf = levConf, leConf=leConf))
 } #eof
 
-dataImport_inner <- function(infoTable, infoTableRed, scanIdCol, confIdCol) {
+dataImport_inner <- function(infoTable, infoTableRed, fileNames, scanIdCol, confIdCol) {
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
   outList <- makeListLayout(infoTable, Ind_s, Ind_c)
@@ -244,7 +244,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
   Ind_c <- which(colnames(infoTable)  == confIdCol)
   outList <- makeListLayout(infoTable, Ind_s, Ind_c)
   if (sepID$sepID == 0) {
-    outList <- dataImport_inner(infoTable, infoTableRed, scanIdCol, confIdCol)
+    outList <- dataImport_inner(infoTable, infoTableRed, fileNames, scanIdCol, confIdCol)
   } else {
     cN <- sepID$sepChar # this is the splitting col name
     indcN <- which(colnames(infoTable) == cN)
@@ -256,7 +256,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
       infoTableSel <- infoTable[ind, ]
       infoTableSelRed <- infoTableSel[, which(!colnames(infoTableSel) %in% c(scanIdCol, confIdCol))]
       infoTableSelRed <- reCharacter(infoTableSelRed)
-      selectionList <- dataImport_inner(infoTableSel, infoTableSelRed, scanIdCol, confIdCol)
+      selectionList <- dataImport_inner(infoTableSel, infoTableSelRed, fileNames, scanIdCol, confIdCol)
       outList[[i]] <- selectionList
     } # Efor i
   } #Eif
