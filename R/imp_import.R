@@ -53,14 +53,21 @@ createInfoTable <- function(fileNames, scanIdCol = const_scanIdCol, confIdCol = 
   infoTable <- as.data.frame(matrix(NA, length(fileNames), maxNrList$maxNr + 1))# to add 1 for the consecutives
   colNameInfTable <- createSingleLineList(fileNames[maxNrList$maxNrInd])$ID
   colnames(infoTable) <- colNameInfTable
-  # infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))] # 
-  
   for (f in 1:length(fileNames)) {
     a <- createSingleLineList(fileNames[f])
     Ind <- match(colNameInfTable, a$ID)
     infoTable[f, ] <- a$value[Ind]
   }
   infoTable <- reFactor(infoTable)
+  allChar <- apply(infoTable[,-ncol(infoTable)], 1, function(x) paste0(x, collapse="-"))
+  a <- rle(allChar)
+  grouping <- a$lengths
+  consecsAll <- NULL
+  for (g in 1:length(grouping)) {
+    consecs <- seq(1, grouping[g])
+    consecsAll <- c(consecsAll, consecs)
+  } #E for
+  infoTable[,ncol(infoTable)] <- consecsAll
   return(infoTable)
 } #Eof
 
@@ -240,3 +247,4 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
   #return(list(colDfAbs=colDfAbs, colDfRef=colDfRef, colDfSmpl=colDfSmpl))
 } #Eof
 
+# infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))] # 
