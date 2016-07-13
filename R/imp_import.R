@@ -83,42 +83,20 @@ askSep <- function(infoTableRed) {
   while (!nrOk) {
     cat("Please provide the index of the class variable to be used for phyical separation of the data, provide 0 for no separation.\n\n")
     print(tmp)
-    cat("\n\n")
     a <- readLines(n = 1)
     a <- as.numeric(a)
     if (all(is.numeric(a)) & length(a) == 1 & a <= length(cns)) {
       nrOk = TRUE
     }
   } # E while
+  if (a == 0) {
+  	msg <- "without separation... "
+  } else {
+  	msg <- paste("separated by ", cns[a], "... ", sep="")
+  }
+  cat(paste("Importing ", nrow(infoTableRed), " datafiles ", msg,  sep=""))
   return(list(sepID = a, sepChar = cns[a]))
 } #Eof
-
-getHeader_old <- function(rawCsvFile, tz = "EST", yearCorrect = 2016) {
-  ColumnNames <- c("ScannerID", "type", "PixelWidth","SystemTemp", "DetectorTemp", "Humidity", "NrMeasPoint", "NrRep", "Gain", "MeasTime", "absTime")
-  # infoTable <- data.frame(matrix(NA, nrow = 1, ncol = length(ColumnNames)))
-  # colnames(infoTable) <- ColumnNames
-  ScannerID <- data.frame(as.character(rawCsvFile[11,2]), stringsAsFactors = F)
-  type <- data.frame(as.numeric(as.character(rawCsvFile[13, 2])), stringsAsFactors = FALSE)
-  if (type == "1") {type <- "Hadamard"} else {type <- "Column"}
-  type <- data.frame(type, stringsAsFactors = FALSE)
-  PixelWidth <- data.frame(as.numeric(as.character(rawCsvFile[16, 2])))
-  SystemTemp <-data.frame(as.numeric(as.character(rawCsvFile[3,2]))/100)
-  DetectorTemp <- data.frame(as.numeric(as.character(rawCsvFile[4,2]))/100)
-  Humidity <- data.frame(as.numeric(as.character(rawCsvFile[5,2]))/100)
-  NrMeasPoint <- data.frame(as.numeric(as.character(rawCsvFile[17,2])))
-  NrRep <- data.frame(as.numeric(as.character(rawCsvFile[18,2])))
-  Gain <- data.frame(as.numeric(as.character(rawCsvFile[19,2])))
-  MeasTime <- data.frame(as.numeric(as.character(rawCsvFile[20,2])))
-  absTime <- as.POSIXct(strptime(as.character(rawCsvFile[1,2]), "%d/%m/%Y @ %H:%M:%S"), tz)
-  if(!difftime(absTime, "1996-06-15 10:59:51 EST", tz = tz) > 3650) {
-    absTime <- absTime-difftime(cut.POSIXt(absTime, "year"), paste0(yearCorrect, "-01-01"))
-  }
-  absTime <- as.character(absTime)
-  absTime <- data.frame(absTime, stringsAsFactors = FALSE)
-  infoTable <- cbind(ScannerID, type, PixelWidth, SystemTemp, DetectorTemp, Humidity, NrMeasPoint, NrRep, Gain, MeasTime, absTime)
-  colnames(infoTable) <- ColumnNames
-  invisible(infoTable)
-}
 
 getHeader <- function(singleFilename, tz = "EST", yearCorrect = 2016) {
   con <- file(singleFilename, open="r")
@@ -145,19 +123,8 @@ getHeader <- function(singleFilename, tz = "EST", yearCorrect = 2016) {
   return(out)
 } #eof
 
-getAbsRefSmplSpect_old <- function(rawCsvFile, wlsRnd = 4) {
-  wavelength <- as.numeric(as.character(rawCsvFile[-(1:21),1]))
-  absorbance <- t(data.frame(as.numeric(as.character(rawCsvFile[-(1:21),2]))))
-  ref <- t(data.frame(as.numeric(as.character(rawCsvFile[-(1:21),3]))))
-  smpl <- t(data.frame(as.numeric(as.character(rawCsvFile[-(1:21),4]))))
-  AbsRefSmplSpect <- rbind(absorbance, ref, smpl)
-  rownames(AbsRefSmplSpect) <- c("absorbance", "reference", "sample")
-  colnames(AbsRefSmplSpect) <- paste0("X", round(wavelength, wlsRnd))
-  invisible(AbsRefSmplSpect)
-} #eof
-
 getAbsRefSmplSpect <- function(singleFilename) {
-  a <- read.csv(singleFilename, skip=19)
+  a <- utils::read.csv(singleFilename, skip=19)
   nir <- t(a[,2:4])
   wls <- paste("X", a[,1], sep="")
   colnames(nir) <- wls
@@ -240,6 +207,15 @@ dataImport_inner <- function(infoTable, infoTableRed, fileNames, scanIdCol, conf
   return(outList)
 } # Eof
 
+#' @title Import Data
+#' @description Imports data from the folder-structure in the 'rawdata' folder
+#' @details XXX Here the details of how the folder should be named, with 
+#' separators etc.
+#' @param scanIdCol The standard colum name for the scanner Id.
+#' @param confIdCol  The standard colum name for the configuration Id.
+#' @param NrAdjust Defaults to 1 XXX
+#' @return A (big) list.
+#' @export
 dataImport <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1) {
   fileNames <- list.files(const_rawdataFolder, full.names = TRUE, recursive = T, pattern = const_fileExtension)
   infoTable <- createInfoTable(fileNames, NrAdjust)
@@ -266,8 +242,7 @@ dataImport <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol,
       outList[[i]] <- selectionList
     } # Efor i
   } #Eif
+  cat("ok.\n")
   return(outList)
   #return(list(colDfAbs=colDfAbs, colDfRef=colDfRef, colDfSmpl=colDfSmpl))
 } #Eof
-
-# infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))] # 

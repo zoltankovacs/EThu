@@ -4,7 +4,6 @@ const_userPrefSep <- "#" # separates all user prefix from config ID in TI filena
 const_elemSep <- "_"# separates class and value pairs in the user prefix
 const_fileExtension <- "*.csv"
 const_nrRestCharCsv <- 27
-
 const_scanIdCol <- "scannerID"
 const_confIdCol <- "configID"
 const_nrSpectDf <- 3

@@ -1,6 +1,6 @@
-#' @title aaa
-#' @description bbb
-#' @details ccc
+#' @title TellSpec
+#' @description Doing things that need to be done - washing for example
+#' @details Better explanation here
 #' @author we
 # @import doParalell
 # @import foreach
