@@ -41,7 +41,7 @@ reFactor <- function(df) {
 
 reCharacter <- function(df) {
   for (i in 1: ncol(df)) {
-    if (!is.character(df[,i])) {
+    if (!is.character(df[,i]) & !is.numeric(df[,i])) {
       df[,i] <- as.character(df[,i])
     }
   }
@@ -205,7 +205,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
   infoTable <- createInfoTable(fileNames, NrAdjust)
   infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))]
   infoTableRed <- reCharacter(infoTableRed)
-  sepID <- askSep(colnames(infoTable))
+  sepID <- askSep(colnames(infoTableRed)[-ncol(infoTableRed)])
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
   outList <- makeListLayout(infoTable, Ind_s, Ind_c)
@@ -234,10 +234,10 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
         outList[[sid]][[cid]][[1]] <- colDfAbs
         outList[[sid]][[cid]][[2]] <- colDfRef
         outList[[sid]][[cid]][[3]] <- colDfSmpl
-        
         # before turn posix and character to factor
       } #Efor uc
     } #Efor us
+    
     
     
   } else {
