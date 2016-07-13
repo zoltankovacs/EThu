@@ -240,7 +240,7 @@ dataImport_inner <- function(infoTable, infoTableRed, fileNames, scanIdCol, conf
   return(outList)
 } # Eof
 
-mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1) {
+dataImport <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1) {
   fileNames <- list.files(const_rawdataFolder, full.names = TRUE, recursive = T, pattern = const_fileExtension)
   infoTable <- createInfoTable(fileNames, NrAdjust)
   infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))]
