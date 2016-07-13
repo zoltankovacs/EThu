@@ -84,7 +84,7 @@ askSep <- function(cns) {
       nrOk = TRUE
     }
   } # E while
-  return(a)
+  return(list(sepID = a, sepChar = cns[a]))
 } #Eof
 
 getHeader_old <- function(rawCsvFile, tz = "EST", yearCorrect = 2016) {
@@ -200,6 +200,42 @@ makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
   #return(list(leScanner=leScanner, uniqS=as.character(uniq_s), levConf = levConf, leConf=leConf))
 } #eof
 
+
+dataImport_inner <- function(infoTable, infoTableRed, scanIdCol, confIdCol) {
+  Ind_s <- which(colnames(infoTable)  == scanIdCol)
+  Ind_c <- which(colnames(infoTable)  == confIdCol)
+  outList <- makeListLayout(infoTable, Ind_s, Ind_c)
+  uniq_s <- unique(infoTable[, Ind_s])
+  for (sid in 1: length(uniq_s)) {
+    Ind <- which(infoTable[, Ind_s] == uniq_s[sid])
+    selinfTable <- infoTable[Ind, ]
+    uniq_c <- unique(selinfTable[, Ind_c])
+    for (cid in 1: length(uniq_c)) {
+      Ind2 <- which(selinfTable[, Ind_c] == uniq_c[cid])
+      a <- getNrOfCol(fileNames[Ind[Ind2]][1], ncol(infoTable)-2)
+      nrOfCol <- a$Nr
+      colNames <- c(colnames(infoTableRed), a$colNames)
+      colDfAbs <- colDfRef <- colDfSmpl <- as.data.frame(matrix(NA, length(Ind2), nrOfCol))
+      colnames(colDfAbs) <- colnames(colDfRef) <- colnames(colDfSmpl) <- colNames
+      fileNamesSelect <- fileNames[Ind[Ind2]]
+      for (i in 1:length(fileNamesSelect)) {
+        Header   <- getHeader(fileNamesSelect[i])
+        spectra <- getAbsRefSmplSpect(fileNamesSelect[i])
+        addHeader <- infoTableRed[Ind[Ind2][i], ]
+        colDfAbs[i,] <- cbind(addHeader, Header, t(spectra[1,]))
+        colDfRef[i,] <- cbind(addHeader, Header, spectra[2,, drop=FALSE])
+        colDfSmpl[i,] <- cbind(addHeader, Header, spectra[3,, drop=FALSE])
+      } #Efor i
+      outList[[sid]][[cid]][[1]] <- colDfAbs
+      outList[[sid]][[cid]][[2]] <- colDfRef
+      outList[[sid]][[cid]][[3]] <- colDfSmpl
+      # before turn posix and character to factor
+    } #Efor uc
+  } #Efor us
+  return(outList)
+} # Eof
+
+
 mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1) {
   fileNames <- list.files(const_rawdataFolder, full.names = TRUE, recursive = T, pattern = const_fileExtension)
   infoTable <- createInfoTable(fileNames, NrAdjust)
@@ -209,39 +245,21 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
   outList <- makeListLayout(infoTable, Ind_s, Ind_c)
-  if (sepID == 0) {
-    uniq_s <- unique(infoTable[, Ind_s])
-    for (sid in 1: length(uniq_s)) {
-      Ind <- which(infoTable[, Ind_s] == uniq_s[sid])
-      selinfTable <- infoTable[Ind, ]
-      uniq_c <- unique(selinfTable[, Ind_c])
-      for (cid in 1: length(uniq_c)) {
-        Ind2 <- which(selinfTable[, Ind_c] == uniq_c[cid])
-        a <- getNrOfCol(fileNames[Ind[Ind2]][1], ncol(infoTable)-2)
-        nrOfCol <- a$Nr
-        colNames <- c(colnames(infoTableRed), a$colNames)
-        colDfAbs <- colDfRef <- colDfSmpl <- as.data.frame(matrix(NA, length(Ind2), nrOfCol))
-        colnames(colDfAbs) <- colnames(colDfRef) <- colnames(colDfSmpl) <- colNames
-        fileNamesSelect <- fileNames[Ind[Ind2]]
-        for (i in 1:length(fileNamesSelect)) {
-          Header   <- getHeader(fileNamesSelect[i])
-          spectra <- getAbsRefSmplSpect(fileNamesSelect[i])
-          addHeader <- infoTableRed[Ind[Ind2][i], ]
-          colDfAbs[i,] <- cbind(addHeader, Header, t(spectra[1,]))
-          colDfRef[i,] <- cbind(addHeader, Header, spectra[2,, drop=FALSE])
-          colDfSmpl[i,] <- cbind(addHeader, Header, spectra[3,, drop=FALSE])
-        } #Efor i
-        outList[[sid]][[cid]][[1]] <- colDfAbs
-        outList[[sid]][[cid]][[2]] <- colDfRef
-        outList[[sid]][[cid]][[3]] <- colDfSmpl
-        # before turn posix and character to factor
-      } #Efor uc
-    } #Efor us
-    
-    
-    
+  if (sepID$sepID == 0) {
+    outList <- dataImport_inner(infoTable, infoTableRed, scanIdCol, confIdCol)
   } else {
-    
+    cN <- sepID$sepChar # this is the splitting col name
+    indcN <- which(colnames(infoTable) == cN)
+    a <- levels(infoTable[,indcN])
+    outList <- vector("list", length(a))
+    names(outList) <- a
+    for (i in 1:length(a)) {
+      ind <- which(infoTable[, indcN] == a[i])
+      infoTableSel <- infoTable[ind, ]
+      infoTableSelRed <- infoTableSel[, which(!colnames(infoTableSel) %in% c(scanIdCol, confIdCol))]
+      selectionList <- dataImport_inner(infoTableSel, infoTableSelRed, scanIdCol, confIdCol)
+      outList[[i]] <- selectionList
+    } # Efor i
   } #Eif
   return(outList)
   #return(list(colDfAbs=colDfAbs, colDfRef=colDfRef, colDfSmpl=colDfSmpl))
