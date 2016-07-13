@@ -46,19 +46,20 @@ reCharacter <- function(df) {
   return(df)
 }#eof
 
-createInfoTable <- function(fileNames, NrAdjust = 1){
+createInfoTable <- function(fileNames, scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1){
   maxNrList <- findMaxNrElements(fileNames, NrAdjust)
-  InfoTable <- as.data.frame(matrix(NA, length(fileNames), maxNrList$maxNr))
+  infoTable <- as.data.frame(matrix(NA, length(fileNames), maxNrList$maxNr+1))# to add 1 for the consecutives
   colNameInfTable <- createSingleLineList(fileNames[maxNrList$maxNrInd])$ID
-  colnames(InfoTable) <- colNameInfTable
+  colnames(infoTable) <- colNameInfTable
+  infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))]
   
   for (f in 1:length(fileNames)){
     a <- createSingleLineList(fileNames[f])
     Ind <- match(colNameInfTable, a$ID)
-    InfoTable[f, ] <- a$value[Ind]
+    infoTable[f, ] <- a$value[Ind]
   }
-  InfoTable <- reFactor(InfoTable)
-  return(InfoTable)
+  infoTable <- reFactor(infoTable)
+  return(infoTable)
 } #Eof
 
 askSep <- function(cns){
