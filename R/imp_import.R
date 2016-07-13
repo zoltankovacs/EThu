@@ -257,6 +257,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
       ind <- which(infoTable[, indcN] == a[i])
       infoTableSel <- infoTable[ind, ]
       infoTableSelRed <- infoTableSel[, which(!colnames(infoTableSel) %in% c(scanIdCol, confIdCol))]
+      infoTableSelRed <- reCharacter(infoTableSelRed)
       selectionList <- dataImport_inner(infoTableSel, infoTableSelRed, scanIdCol, confIdCol)
       outList[[i]] <- selectionList
     } # Efor i
