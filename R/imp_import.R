@@ -75,7 +75,7 @@ askSep <- function(cns) {
   nrOk <- FALSE
   tmp <- data.frame(classVariables = cns)
   while (!nrOk) {
-    cat("Please provide the index of the class variable to be used for phyical separation of the data, provide 0 for no separation\n\n")
+    cat("Please provide the index of the class variable to be used for phyical separation of the data, provide 0 for no separation.\n\n")
     print(tmp)
     cat("\n\n")
     a <- readLines(n = 1)
@@ -200,7 +200,6 @@ makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
   #return(list(leScanner=leScanner, uniqS=as.character(uniq_s), levConf = levConf, leConf=leConf))
 } #eof
 
-
 dataImport_inner <- function(infoTable, infoTableRed, scanIdCol, confIdCol) {
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
@@ -234,7 +233,6 @@ dataImport_inner <- function(infoTable, infoTableRed, scanIdCol, confIdCol) {
   } #Efor us
   return(outList)
 } # Eof
-
 
 mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1) {
   fileNames <- list.files(const_rawdataFolder, full.names = TRUE, recursive = T, pattern = const_fileExtension)
