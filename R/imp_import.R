@@ -4,21 +4,21 @@ findMaxNrElements <- function(fileNames, NrAdjust, sep = const_sep){
   maxNr <- maxNr -1 
   maxNr <- maxNr + NrAdjust
   return(list(maxNr=maxNr, maxNrInd=maxNrInd))
-  } #Eof
+} #Eof
 
 createSingleLineList <- function(singlePath){
   pathSplit <- unlist(strsplit(singlePath, "/"))[-1]
   last <- pathSplit[length(pathSplit)]
   
   hashSplit <- unlist(strsplit(last, const_userPrefSep))
-   if (length(hashSplit) == 1) { # if there is no '#' present
-     configID <- substr(last, 1, nchar(last) - const_nrRestCharCsv)
-     pathSplit <- pathSplit[-length(pathSplit)]
-    } else {
-      configID <- substr(hashSplit[2], 1, nchar(hashSplit[2]) - const_nrRestCharCsv)
-      userInput <- unlist(strsplit(hashSplit[1], const_elemSep))
-      pathSplit <- c(pathSplit[-length(pathSplit)], userInput)
-    }
+  if (length(hashSplit) == 1) { # if there is no '#' present
+    configID <- substr(last, 1, nchar(last) - const_nrRestCharCsv)
+    pathSplit <- pathSplit[-length(pathSplit)]
+  } else {
+    configID <- substr(hashSplit[2], 1, nchar(hashSplit[2]) - const_nrRestCharCsv)
+    userInput <- unlist(strsplit(hashSplit[1], const_elemSep))
+    pathSplit <- c(pathSplit[-length(pathSplit)], userInput)
+  }
   pathSplit <- c(pathSplit, paste("configID", configID, sep = "@"))
   
   sepSplit <- strsplit(pathSplit, "@")
@@ -32,6 +32,15 @@ reFactor <- function(df) {
   for (i in 1: ncol(df)) {
     if (!is.factor(df[,i])) {
       df[,i] <- as.factor(df[,i])
+    }
+  }
+  return(df)
+}#eof
+
+reCharacter <- function(df) {
+  for (i in 1: ncol(df)) {
+    if (!is.character(df[,i])) {
+      df[,i] <- as.character(df[,i])
     }
   }
   return(df)
@@ -62,7 +71,7 @@ askSep <- function(cns){
     a <- readLines(n = 1)
     a <- as.numeric(a)
     if (all(is.numeric(a)) & length(a) == 1 & a <= length(cns)){
-         nrOk = TRUE
+      nrOk = TRUE
     }
   } # E while
   return(a)
@@ -136,23 +145,26 @@ getAbsRefSmplSpect <- function(singleFilename){
   nir <- t(a[,2:4])
   wls <- paste("X", a[,1], sep="")
   colnames(nir) <- wls
-  rownames(nir) <- c("absorbance", "reference", "sample")
+  rownames(nir) <- const_nameSpectList
   return(nir)
 } #eof
 
 getNrOfCol <- function(singlePath, nrColAdd){
-  tmp <- read.csv(singlePath)
-  headerTable <- getHeader(tmp)
-  AbsRefSmplSpect <- getAbsRefSmplSpect(tmp)
+  headerTable <- getHeader(singlePath)
+  AbsRefSmplSpect <- getAbsRefSmplSpect(singlePath)
   Nr <- ncol(headerTable) + ncol(AbsRefSmplSpect) + nrColAdd
   colNames <- c(colnames(headerTable), colnames(AbsRefSmplSpect))
   return(list(Nr=Nr, colNames=colNames))
 }#Eof
 
 makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
+  nrSpectDf <- const_nrSpectDf
   uniq_s <- unique(infoTable[, ColInd_s])
   leScanner <- length(uniq_s)
   leConf <- levConf <-  NULL
+  spectList <- vector("list", nrSpectDf)
+  names(spectList) <- const_nameSpectList
+  # first get the dimensions of the list
   for (i in 1:leScanner){
     ind <- which(infoTable[,ColInd_s] == uniq_s[i])
     tmp <- infoTable[ind,]
@@ -161,41 +173,47 @@ makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
     levConf <- c(levConf, a)
     leConf <- c(leConf, b)
   } # end for i
-  
-  return(list(leScanner=leScanner, uniqS=as.character(uniq_s), levConf = levConf, leConf=leConf))
+  outList <- vector("list", leScanner)
+  names(outList) <- as.character(uniq_s)
+  ao <- NULL
+  for (i in 1: leScanner) {
+    a <- rep(i, leConf[i])
+    ao <- c(ao, a)
+  }
+  # create the list
+  for (i in 1:leScanner){
+    outList[[i]] <- lapply(vector("list", leConf[i]), function(x) c(x, spectList))
+    # Names <- levConf[(sum(leConf[1:i])-leConf[i]+1):sum(leConf[1:i])]
+    names(outList[[i]]) <- as.character(levConf[which(ao == i)])
+  }#efor
+  return(outList)
+  #return(list(leScanner=leScanner, uniqS=as.character(uniq_s), levConf = levConf, leConf=leConf))
 } #eof
 
 mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAdjust = 1){
   fileNames <- list.files(const_rawdataFolder, full.names = TRUE, recursive = T, pattern = const_fileExtension)
   infoTable <- createInfoTable(fileNames, NrAdjust)
-  print(length(fileNames)); wait()
   infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))]
+  infoTableRed <- reCharacter(infoTableRed)
   sepID <- askSep(colnames(infoTable))
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
-  
+  outList <- makeListLayout(infoTable, Ind_s, Ind_c)
   if (sepID == 0){
     uniq_s <- unique(infoTable[, Ind_s])
-    # for (us in uniq_s){
-    for (us in uniq_s[1]){
-      Ind <- which(infoTable[, Ind_s] == us)
+    for (sid in 1: length(uniq_s)) {
+      Ind <- which(infoTable[, Ind_s] == uniq_s[sid])
       selinfTable <- infoTable[Ind, ]
       uniq_c <- unique(selinfTable[, Ind_c])
-      # for (uc in uniq_c){
-      for (uc in uniq_c[1]){
-        Ind2 <- which(selinfTable[, Ind_c] == uc)
-        print(length(Ind2)); wait()
+      for (cid in 1: length(uniq_c)) {
+        Ind2 <- which(selinfTable[, Ind_c] == uniq_c[cid])
         a <- getNrOfCol(fileNames[Ind[Ind2]][1], ncol(infoTable)-2)
         nrOfCol <- a$Nr
         colNames <- c(colnames(infoTableRed), a$colNames)
         colDfAbs <- colDfRef <- colDfSmpl <- as.data.frame(matrix(NA, length(Ind2), nrOfCol))
-        print(nrow(colDfAbs)); wait()
-        
         colnames(colDfAbs) <- colnames(colDfRef) <- colnames(colDfSmpl) <- colNames
         fileNamesSelect <- fileNames[Ind[Ind2]]
-        print(1:length(fileNamesSelect)); wait()
         for (i in 1:length(fileNamesSelect)){
-        #  tmp <- read.csv(fileNamesSelect[i])
           Header   <- getHeader(fileNamesSelect[i])
           spectra <- getAbsRefSmplSpect(fileNamesSelect[i])
           addHeader <- infoTableRed[Ind[Ind2][i], ]
@@ -203,7 +221,10 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
           colDfRef[i,] <- cbind(addHeader, Header, spectra[2,, drop=FALSE])
           colDfSmpl[i,] <- cbind(addHeader, Header, spectra[3,, drop=FALSE])
         } #Efor i
-        # here should save the giveb confog's data
+        outList[[sid]][[cid]][[1]] <- colDfAbs
+        outList[[sid]][[cid]][[2]] <- colDfRef
+        outList[[sid]][[cid]][[3]] <- colDfSmpl
+        
         # before turn posix and character to factor
       } #Efor uc
     } #Efor us
@@ -212,10 +233,7 @@ mainF <- function(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol, NrAd
   } else {
     
   } #Eif
-  return(list(colDfAbs=colDfAbs, colDfRef=colDfRef, colDfSmpl=colDfSmpl))
+  return(outList)
+  #return(list(colDfAbs=colDfAbs, colDfRef=colDfRef, colDfSmpl=colDfSmpl))
 } #Eof
 
-test <- function() {
-  
-  print("deeee")
-}
