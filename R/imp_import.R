@@ -71,7 +71,7 @@ createInfoTable <- function(fileNames, scanIdCol = const_scanIdCol, confIdCol = 
   return(infoTable)
 } #Eof
 
-askSep <- function(infoTableRed) {
+askSep <- function(infoTableRed, doPar) {
   cns <- colnames(infoTableRed)[-ncol(infoTableRed)]
   naInd <- which(is.na(infoTableRed[-ncol(infoTableRed)]), arr.ind = TRUE)
   if (nrow(naInd) != 0){
@@ -94,7 +94,8 @@ askSep <- function(infoTableRed) {
   } else {
   	msg <- paste("separated by ", cns[a], "... ", sep="")
   }
-  cat(paste("Importing ", nrow(infoTableRed), " datafiles ", msg,  sep=""))
+  if (doPar) {dpadd <- "(parallel) "} else {dpadd <- "(seriell) "}
+  cat(paste("Importing ", nrow(infoTableRed), " datafiles ", dpadd, msg,  sep=""))
   return(list(sepID = a, sepChar = cns[a]))
 } #Eof
 
@@ -173,16 +174,15 @@ makeListLayout <- function(infoTable, ColInd_s, colInd_c) {
   #return(list(leScanner=leScanner, uniqS=as.character(uniq_s), levConf = levConf, leConf=leConf))
 } #eof
 
-makeListLayout_Outer_parallel <- function(infoTable, ColInd_s, colInd_c) {
-	uniq_s <- unique(infoTable[, ColInd_s])
-	leScanner <- length(uniq_s)
-	outList <- vector("list", leScanner)
-	names(outList) <- as.character(uniq_s)
-	return(outList)
-} # EOF
-
-makeListLayout_Inner_parallel <- function() {
-	
+makeListLayout_configIDs_parallel <- function(uniq_c) {
+	nrSpectDf <- const_nrSpectDf
+	nameSpectList <- const_nameSpectList
+	#
+	spectList <- vector("list", nrSpectDf) # the spectList is the Innermost list, containing the three types of spectra
+	names(spectList) <- nameSpectList
+	configList <- lapply(vector("list", length(uniq_c)), function(x) c(x, spectList)) # make a list with length of unique configIDs and have in each three spectra lists
+	names(configList) <- uniq_c
+	return(configList)
 } # EOF
 
 dataImport_inner_old <- function(infoTable, infoTableRed, fileNames, scanIdCol, confIdCol) {
@@ -222,7 +222,6 @@ dataImport_inner_old <- function(infoTable, infoTableRed, fileNames, scanIdCol, 
 dataImport_inner <- function(infoTable, infoTableRed, fileNames, scanIdCol, confIdCol, doPar) {
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
-  outList <- makeListLayout(infoTable, Ind_s, Ind_c) # the list for the serial processing
   uniq_s <- unique(infoTable[, Ind_s])
   # check if we have to register a parallel backend
   if (doPar) {
@@ -230,13 +229,13 @@ dataImport_inner <- function(infoTable, infoTableRed, fileNames, scanIdCol, conf
   } else {
   	foreach::registerDoSEQ() # from package foreach, is registering a serial backend -- so NO parallel computations
   }
-  
   if (doPar) {
-		parOuterList <- makeListLayout_Outer_parallel(infoTable, Ind_s, Ind_c)
-		outList <- foreach(sid= 1: length(uniq_s), .combine="list") %dopar% { # going through the single scanner IDs
+		parStackList <- foreach(sid= 1: length(uniq_s)) %dopar% { # going through the single scanner IDs
   	  		Ind <- which(infoTable[, Ind_s] == uniq_s[sid])
-			selinfTable <- infoTable[Ind, ]
+			selinfTable <- infoTable[Ind, ] # is the infoTable that only contains a single scannerID
 			uniq_c <- unique(selinfTable[, Ind_c])
+			configList <- makeListLayout_configIDs_parallel(uniq_c) # here make the collection of lists for the configIDs
+			##	
 			for (cid in 1: length(uniq_c)) { # going through the single config IDs within a single scanner
 			  Ind2 <- which(selinfTable[, Ind_c] == uniq_c[cid])
 			  a <- getNrOfCol(fileNames[Ind[Ind2]][1], ncol(infoTable)-2)
@@ -253,42 +252,44 @@ dataImport_inner <- function(infoTable, infoTableRed, fileNames, scanIdCol, conf
 				colDfRef[i,] <- cbind(addHeader, Header, spectra[2,, drop=FALSE])
 				colDfSmpl[i,] <- cbind(addHeader, Header, spectra[3,, drop=FALSE])
 			  } #Efor i
-			  outList[[sid]][[cid]][[1]] <- colDfAbs
-			  outList[[sid]][[cid]][[2]] <- colDfRef
-			  outList[[sid]][[cid]][[3]] <- colDfSmpl
+			  configList[[cid]][[1]] <- colDfAbs
+			  configList[[cid]][[2]] <- colDfRef
+			  configList[[cid]][[3]] <- colDfSmpl
 			} #Efor uc
-			out <- outList
-  	  } # end parallel for i
-   
+			out <- configList # the result from the parallel
+  	  	} # end parallel for i
+  	  	names(parStackList) <- as.character(uniq_s) # give it back the names
+  	  	return(parStackList)
   } else { # so we do NOT do it in parallel
-  for (sid in 1: length(uniq_s)) {
-    Ind <- which(infoTable[, Ind_s] == uniq_s[sid])
-    selinfTable <- infoTable[Ind, ]
-    uniq_c <- unique(selinfTable[, Ind_c])
-    for (cid in 1: length(uniq_c)) {
-      Ind2 <- which(selinfTable[, Ind_c] == uniq_c[cid])
-      a <- getNrOfCol(fileNames[Ind[Ind2]][1], ncol(infoTable)-2)
-      nrOfCol <- a$Nr
-      colNames <- c(colnames(infoTableRed), a$colNames)
-      colDfAbs <- colDfRef <- colDfSmpl <- as.data.frame(matrix(NA, length(Ind2), nrOfCol))
-      colnames(colDfAbs) <- colnames(colDfRef) <- colnames(colDfSmpl) <- colNames
-      fileNamesSelect <- fileNames[Ind[Ind2]]
-      for (i in 1:length(fileNamesSelect)) {
-        Header   <- getHeader(fileNamesSelect[i])
-        spectra <- getAbsRefSmplSpect(fileNamesSelect[i])
-        addHeader <- infoTableRed[Ind[Ind2][i], ]
-        colDfAbs[i,] <- cbind(addHeader, Header, t(spectra[1,]))
-        colDfRef[i,] <- cbind(addHeader, Header, spectra[2,, drop=FALSE])
-        colDfSmpl[i,] <- cbind(addHeader, Header, spectra[3,, drop=FALSE])
-      } #Efor i
-      outList[[sid]][[cid]][[1]] <- colDfAbs
-      outList[[sid]][[cid]][[2]] <- colDfRef
-      outList[[sid]][[cid]][[3]] <- colDfSmpl
-      # before turn posix and character to factor
-    } #Efor uc
-  } #Efor us
-  } # end else if dopar
-  return(outList)
+	outList <- makeListLayout(infoTable, Ind_s, Ind_c) # the list for the serial processing
+  	for (sid in 1: length(uniq_s)) {
+    	Ind <- which(infoTable[, Ind_s] == uniq_s[sid])
+   		selinfTable <- infoTable[Ind, ]
+    	uniq_c <- unique(selinfTable[, Ind_c])
+    	for (cid in 1: length(uniq_c)) {
+      		Ind2 <- which(selinfTable[, Ind_c] == uniq_c[cid])
+		    a <- getNrOfCol(fileNames[Ind[Ind2]][1], ncol(infoTable)-2)
+			nrOfCol <- a$Nr
+		    colNames <- c(colnames(infoTableRed), a$colNames)
+			colDfAbs <- colDfRef <- colDfSmpl <- as.data.frame(matrix(NA, length(Ind2), nrOfCol))
+			colnames(colDfAbs) <- colnames(colDfRef) <- colnames(colDfSmpl) <- colNames
+			fileNamesSelect <- fileNames[Ind[Ind2]]
+			for (i in 1:length(fileNamesSelect)) {
+		        Header   <- getHeader(fileNamesSelect[i])
+        		spectra <- getAbsRefSmplSpect(fileNamesSelect[i])
+		        addHeader <- infoTableRed[Ind[Ind2][i], ]
+        		colDfAbs[i,] <- cbind(addHeader, Header, t(spectra[1,]))
+		        colDfRef[i,] <- cbind(addHeader, Header, spectra[2,, drop=FALSE])
+        		colDfSmpl[i,] <- cbind(addHeader, Header, spectra[3,, drop=FALSE])
+      		} # end for i
+		    outList[[sid]][[cid]][[1]] <- colDfAbs
+		    outList[[sid]][[cid]][[2]] <- colDfRef
+		    outList[[sid]][[cid]][[3]] <- colDfSmpl
+      		# before turn posix and character to factor
+      	} # end for cid
+	} # end for sid
+	return(outList)
+ } # end else if dopar
 } # Eof
 
 checkMainInput <- function(doPar, scanIdCol, confIdCol) {
@@ -319,7 +320,7 @@ dataImport <- function(doPar=TRUE, scanIdCol="def", confIdCol="def", NrAdjust = 
   infoTable <- createInfoTable(fileNames, NrAdjust)
   infoTableRed <- infoTable[, which(!colnames(infoTable) %in% c(scanIdCol, confIdCol))]
   infoTableRed <- reCharacter(infoTableRed)
-  sepID <- askSep(infoTableRed)
+  sepID <- askSep(infoTableRed, doPar)
   Ind_s <- which(colnames(infoTable)  == scanIdCol)
   Ind_c <- which(colnames(infoTable)  == confIdCol)
   outList <- makeListLayout(infoTable, Ind_s, Ind_c)
