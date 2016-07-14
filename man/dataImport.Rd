@@ -4,10 +4,12 @@
 \alias{dataImport}
 \title{Import Data}
 \usage{
-dataImport(scanIdCol = const_scanIdCol, confIdCol = const_confIdCol,
+dataImport(doPar = TRUE, scanIdCol = "def", confIdCol = "def",
   NrAdjust = 1)
 }
 \arguments{
+\item{doPar}{Logical. If datafile import should be done in parallel.}
+
 \item{scanIdCol}{The standard colum name for the scanner Id.}
 
 \item{confIdCol}{The standard colum name for the configuration Id.}

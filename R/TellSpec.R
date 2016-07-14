@@ -1,9 +1,11 @@
 #' @title TellSpec
 #' @description Doing things that need to be done - washing for example
 #' @details Better explanation here
-#' @author we
+#' @author Zoltan Kovacs
+#' 
 # @import doParalell
-# @import foreach
+#' @import foreach
+#' 
 #' @docType package
 #' @name TellSpec
 NULL

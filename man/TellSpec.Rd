@@ -12,6 +12,6 @@ Doing things that need to be done - washing for example
 Better explanation here
 }
 \author{
-we
+Zoltan Kovacs
 }
 
