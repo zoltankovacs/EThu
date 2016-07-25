@@ -337,7 +337,7 @@ dataImport <- function(doPar=TRUE, scanIdCol="def", confIdCol="def", NrAdjust = 
       infoTableSel <- infoTable[ind, ]
       infoTableSelRed <- infoTableSel[, which(!colnames(infoTableSel) %in% c(scanIdCol, confIdCol))]
       infoTableSelRed <- reCharacter(infoTableSelRed)
-      selectionList <- dataImport_inner(infoTableSel, infoTableSelRed, fileNames, scanIdCol, confIdCol, doPar)
+      selectionList <- dataImport_inner(infoTableSel, infoTableSelRed, fileNames[ind], scanIdCol, confIdCol, doPar)
       outList[[i]] <- selectionList
     } # Efor i
   } #Eif
