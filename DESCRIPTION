@@ -1,17 +1,19 @@
-Package: TellSpec
+Package: EThu
 Type: Package
-Title: Doing things that need to be done - washing for example
+Title: R-project program package for electronic tongue data evaluations
 Version: 0.1.0
-Date: 2016-07-11
-Author: Bernhard san and Zoltan
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: This package does nice things. Very nice things indeed.
+Date: 2016-08-10
+Author: Zoltan Kovacs
+Maintainer: Who to complain to <kovacs@correltech.hu>
+Description: This package has been developed for evaluation of electronic tongue measurement results.
 License: GPL (>=2)
 Lazyload: yes
 Depends:
     R (>= 3.1.3)
 Imports:
+	MASS,
+	plyr,
 	doParallel,
 	parallel,
 	foreach
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
